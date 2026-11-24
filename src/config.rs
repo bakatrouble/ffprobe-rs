@@ -9,6 +9,7 @@ pub struct Config {
     pub(crate) ffprobe_bin: std::path::PathBuf,
     pub(crate) http_proxy: Option<String>,
     pub(crate) timeout: Option<std::time::Duration>,
+    pub(crate) probesize: Option<u64>,
 }
 
 impl Config {
@@ -19,6 +20,7 @@ impl Config {
             ffprobe_bin: "ffprobe".into(),
             http_proxy: None,
             timeout: None,
+            probesize: None,
         }
     }
 
@@ -48,6 +50,13 @@ impl Config {
     /// The value is passed in microseconds, so sub-microsecond precision is dropped.
     pub fn timeout(mut self, timeout: std::time::Duration) -> Self {
         self.timeout = Some(timeout);
+        self
+    }
+
+    /// Cap the bytes ffprobe reads while probing the container, as ffmpeg's
+    /// `-probesize`. Given in bytes (ffmpeg accepts a plain integer).
+    pub fn probesize(mut self, bytes: u64) -> Self {
+        self.probesize = Some(bytes);
         self
     }
 
