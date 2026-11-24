@@ -192,7 +192,7 @@ pub async fn ffprobe_async_config<'a, T: IntoFfprobeArg<'a>>(
     path: T,
 ) -> Result<FfProbe, FfProbeError> {
     let path = path.into_ffprobe_arg();
-    let mut cmd = tokio::process::Command::new("ffprobe");
+    let mut cmd = tokio::process::Command::new(config.ffprobe_bin);
     cmd.args(["-v", "quiet", "-print_format", "json"]);
     #[cfg(feature = "chapters")]
     cmd.arg("-show_chapters");
