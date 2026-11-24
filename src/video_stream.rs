@@ -85,7 +85,8 @@ pub struct VideoStream {
     pub is_avc: Option<bool>,
     /// Level of the codec profile used for the video stream.
     /// TODO: explain
-    pub level: i64,
+    /// Absent for image codecs (png, mjpeg) that ffprobe reports as attached pictures.
+    pub level: Option<i64>,
     /// Size of the NAL (Network Abstraction Layer) units in the video stream.
     #[serde(deserialize_with = "option_string_to_int", default)]
     pub nal_length_size: Option<i64>,
@@ -125,4 +126,33 @@ pub struct VideoStream {
     pub codec_time_base: Option<Ratio>,
     #[serde(deserialize_with = "option_string_to_int", default)]
     pub nal_length: Option<i64>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::VideoStream;
+
+    /// Stream fields as ffprobe reports a PNG attached picture (no `level`,
+    /// no `is_avc`, no `profile`).
+    #[test]
+    fn png_attached_picture_without_level_parses() {
+        let json = serde_json::json!({
+            "width": 320,
+            "height": 240,
+            "coded_width": 320,
+            "coded_height": 240,
+            "has_b_frames": 0,
+            "codec_name": "png",
+            "codec_long_name": "PNG (Portable Network Graphics) image",
+            "pix_fmt": "rgb24",
+            "display_aspect_ratio": "4:3",
+            "sample_aspect_ratio": "1:1",
+            "duration_ts": 1,
+            "color_range": "pc",
+            "color_space": "bt470bg"
+        });
+        let stream: VideoStream = serde_json::from_value(json).expect("png stream parses");
+        assert_eq!(stream.level, None);
+        assert_eq!(stream.codec_name, "png");
+    }
 }
