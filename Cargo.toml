@@ -30,4 +30,4 @@ async = ["dep:tokio"]
 __internal_deny_unknown_fields = []
 
 [dev-dependencies]
-tokio = { version = "1.49", features = ["macros", "rt"] }
+tokio = { version = "1.49", features = ["macros", "rt", "time"] }
