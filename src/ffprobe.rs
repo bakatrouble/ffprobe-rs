@@ -11,7 +11,9 @@ use serde::{Deserialize, Serialize};
 /// FfProbe parsed
 pub struct FfProbe {
     #[cfg(feature = "streams")]
-    /// Streams of file
+    /// Streams of file. A stream that does not parse is kept as a stream with
+    /// [`StreamKinds::Unknown`] (see [`crate::streams::lenient_streams`]).
+    #[serde(deserialize_with = "crate::streams::lenient_streams")]
     pub streams: Vec<Stream>,
     #[cfg(feature = "chapters")]
     /// Chapters of file

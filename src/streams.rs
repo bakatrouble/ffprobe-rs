@@ -369,3 +369,117 @@ where
         None => Ok(None),
     }
 }
+
+/// Deserialize `streams` leniently: one malformed stream no longer fails the
+/// whole document.
+///
+/// A stream that parses is kept as-is. A stream that does not is kept with
+/// its `index` and `disposition` (each when they parse) and
+/// [`StreamKinds::Unknown`], with the other fields defaulted, so a later
+/// stream (such as an attached picture) is still reported. A value without a
+/// usable `index` cannot be placed and is dropped.
+#[cfg(feature = "streams")]
+pub(crate) fn lenient_streams<'de, D>(deserializer: D) -> Result<Vec<Stream>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let values = Vec::<serde_json::Value>::deserialize(deserializer)?;
+    Ok(values.iter().filter_map(lenient_stream).collect())
+}
+
+#[cfg(feature = "streams")]
+fn lenient_stream(value: &serde_json::Value) -> Option<Stream> {
+    if let Ok(stream) = Stream::deserialize(value) {
+        return Some(stream);
+    }
+    let index = value.get("index")?.as_u64()?;
+    let disposition = value
+        .get("disposition")
+        .and_then(|d| Disposition::deserialize(d).ok())
+        .unwrap_or_default();
+    Some(Stream {
+        id: value.get("id").and_then(|v| v.as_str()).map(str::to_owned),
+        index,
+        disposition,
+        avg_frame_rate: Ratio::default(),
+        codec_tag: Vec::new(),
+        time_base: Ratio::default(),
+        start_pts: 0,
+        side_data_list: Vec::new(),
+        extradata_size: None,
+        r_frame_rate: Ratio::default(),
+        nb_frames: None,
+        nb_read_frames: None,
+        #[cfg(feature = "__internal_deny_unknown_fields")]
+        codec_tag_string: serde_value::Value::Unit,
+        stream: StreamKinds::Unknown,
+    })
+}
+
+#[cfg(all(test, feature = "streams"))]
+mod lenient_tests {
+    use serde::Deserialize;
+
+    use super::{lenient_streams, Stream, StreamKinds};
+
+    #[derive(Deserialize)]
+    struct Wrap {
+        #[serde(deserialize_with = "lenient_streams")]
+        streams: Vec<Stream>,
+    }
+
+    /// Real ffprobe output for a video stream and a PNG attached picture.
+    const VIDEO: &str = r#"{"index":0,"codec_name":"h264","codec_long_name":"H.264","codec_type":"video","codec_tag_string":"avc1","codec_tag":"0x31637661","width":320,"height":240,"coded_width":320,"coded_height":240,"has_b_frames":0,"sample_aspect_ratio":"1:1","display_aspect_ratio":"4:3","pix_fmt":"yuv444p","level":30,"profile":"High 4:4:4 Predictive","field_order":"progressive","r_frame_rate":"25/1","avg_frame_rate":"25/1","time_base":"1/12800","start_pts":0,"duration_ts":25600,"disposition":{"default":1,"dub":0,"original":0,"comment":0,"lyrics":0,"karaoke":0,"forced":0,"hearing_impaired":0,"visual_impaired":0,"clean_effects":0,"attached_pic":0,"timed_thumbnails":0,"non_diegetic":0,"captions":0,"descriptions":0,"metadata":0,"dependent":0,"still_image":0}}"#;
+    const PNG: &str = r#"{"index":1,"codec_name":"png","codec_long_name":"PNG","codec_type":"video","codec_tag_string":"[0][0][0][0]","codec_tag":"0x0000","width":320,"height":240,"coded_width":320,"coded_height":240,"has_b_frames":0,"sample_aspect_ratio":"1:1","display_aspect_ratio":"4:3","pix_fmt":"rgb24","r_frame_rate":"90000/1","avg_frame_rate":"0/0","time_base":"1/90000","start_pts":0,"disposition":{"default":0,"dub":0,"original":0,"comment":0,"lyrics":0,"karaoke":0,"forced":0,"hearing_impaired":0,"visual_impaired":0,"clean_effects":0,"attached_pic":1,"timed_thumbnails":0,"non_diegetic":0,"captions":0,"descriptions":0,"metadata":0,"dependent":0,"still_image":0}}"#;
+
+    fn parse(streams: &[&str]) -> Vec<Stream> {
+        let body = format!("{{\"streams\":[{}]}}", streams.join(","));
+        serde_json::from_str::<Wrap>(&body)
+            .expect("document parses")
+            .streams
+    }
+
+    #[test]
+    fn valid_streams_are_kept_as_parsed() {
+        let streams = parse(&[VIDEO, PNG]);
+        assert_eq!(streams.len(), 2);
+        assert!(matches!(streams[0].stream, StreamKinds::Video(_)));
+        assert_eq!(streams[1].disposition.attached_pic, 1);
+    }
+
+    #[test]
+    fn malformed_stream_keeps_index_and_later_streams() {
+        // The first stream's width is a string, so its body fails to parse.
+        let broken = VIDEO.replace("\"width\":320", "\"width\":\"wide\"");
+        let streams = parse(&[&broken, PNG]);
+        assert_eq!(streams.len(), 2);
+        assert_eq!(streams[0].index, 0);
+        assert!(matches!(streams[0].stream, StreamKinds::Unknown));
+        // The later attached picture is still reported.
+        assert_eq!(streams[1].index, 1);
+        assert_eq!(streams[1].disposition.attached_pic, 1);
+        assert!(matches!(streams[1].stream, StreamKinds::Video(_)));
+    }
+
+    #[test]
+    fn malformed_disposition_defaults_but_keeps_the_stream() {
+        let broken = PNG.replace("\"attached_pic\":1", "\"attached_pic\":\"yes\"");
+        let streams = parse(&[&broken]);
+        assert_eq!(streams.len(), 1);
+        assert_eq!(streams[0].index, 1);
+        assert_eq!(streams[0].disposition.attached_pic, 0);
+    }
+
+    #[test]
+    fn stream_without_a_usable_index_is_dropped() {
+        let no_index = VIDEO.replace("\"index\":0,", "");
+        let streams = parse(&[&no_index, PNG]);
+        assert_eq!(streams.len(), 1);
+        assert_eq!(streams[0].index, 1);
+    }
+
+    #[test]
+    fn non_array_streams_still_fail_the_document() {
+        assert!(serde_json::from_str::<Wrap>(r#"{"streams":"nope"}"#).is_err());
+    }
+}
