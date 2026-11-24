@@ -172,6 +172,9 @@ pub fn ffprobe_config<'a, T: IntoFfprobeArg<'a>>(
     if let Some(timeout) = config.timeout {
         cmd.args(["-timeout", &timeout.as_micros().to_string()]);
     }
+    if let Some(protocols) = &config.protocol_whitelist {
+        cmd.args(["-protocol_whitelist", protocols]);
+    }
     cmd.arg(path.as_ref());
 
     // Prevent CMD popup on Windows.
@@ -216,6 +219,9 @@ pub async fn ffprobe_async_config<'a, T: IntoFfprobeArg<'a>>(
     }
     if let Some(timeout) = config.timeout {
         cmd.args(["-timeout", &timeout.as_micros().to_string()]);
+    }
+    if let Some(protocols) = &config.protocol_whitelist {
+        cmd.args(["-protocol_whitelist", protocols]);
     }
     cmd.arg(path.as_ref());
 

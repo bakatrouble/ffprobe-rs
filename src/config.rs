@@ -9,6 +9,7 @@ pub struct Config {
     pub(crate) ffprobe_bin: std::path::PathBuf,
     pub(crate) http_proxy: Option<String>,
     pub(crate) timeout: Option<std::time::Duration>,
+    pub(crate) protocol_whitelist: Option<String>,
 }
 
 impl Config {
@@ -19,6 +20,7 @@ impl Config {
             ffprobe_bin: "ffprobe".into(),
             http_proxy: None,
             timeout: None,
+            protocol_whitelist: None,
         }
     }
 
@@ -48,6 +50,14 @@ impl Config {
     /// The value is passed in microseconds, so sub-microsecond precision is dropped.
     pub fn timeout(mut self, timeout: std::time::Duration) -> Self {
         self.timeout = Some(timeout);
+        self
+    }
+
+    /// Restrict the protocols ffprobe may open, as ffmpeg's
+    /// `-protocol_whitelist` (a comma-separated list, for example
+    /// `"http,https,tls,tcp"`). Unset leaves ffmpeg's default list.
+    pub fn protocol_whitelist(mut self, protocols: impl Into<String>) -> Self {
+        self.protocol_whitelist = Some(protocols.into());
         self
     }
 
