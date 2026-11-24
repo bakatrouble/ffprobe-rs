@@ -7,6 +7,7 @@ use crate::{error::FfProbeError, ffprobe::FfProbe, ffprobe_config, IntoFfprobeAr
 pub struct Config {
     pub(crate) count_frames: bool,
     pub(crate) ffprobe_bin: std::path::PathBuf,
+    pub(crate) timeout: Option<std::time::Duration>,
 }
 
 impl Config {
@@ -15,6 +16,7 @@ impl Config {
         Config {
             count_frames: false,
             ffprobe_bin: "ffprobe".into(),
+            timeout: None,
         }
     }
 
@@ -30,6 +32,13 @@ impl Config {
     /// for executing `ffprobe`.
     pub fn ffprobe_bin(mut self, ffprobe_bin: impl AsRef<std::path::Path>) -> Self {
         self.ffprobe_bin = ffprobe_bin.as_ref().to_path_buf();
+        self
+    }
+
+    /// Limit network I/O for the input, as ffmpeg's `-timeout` option.
+    /// The value is passed in microseconds, so sub-microsecond precision is dropped.
+    pub fn timeout(mut self, timeout: std::time::Duration) -> Self {
+        self.timeout = Some(timeout);
         self
     }
 
