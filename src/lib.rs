@@ -166,6 +166,9 @@ pub fn ffprobe_config<'a, T: IntoFfprobeArg<'a>>(
         cmd.arg("-count_frames");
     }
 
+    if let Some(proxy) = &config.http_proxy {
+        cmd.args(["-http_proxy", proxy]);
+    }
     cmd.arg(path.as_ref());
 
     // Prevent CMD popup on Windows.
@@ -205,6 +208,9 @@ pub async fn ffprobe_async_config<'a, T: IntoFfprobeArg<'a>>(
         cmd.arg("-count_frames");
     }
 
+    if let Some(proxy) = &config.http_proxy {
+        cmd.args(["-http_proxy", proxy]);
+    }
     cmd.arg(path.as_ref());
 
     cmd.kill_on_drop(true);

@@ -14,7 +14,10 @@ async fn dropping_the_future_kills_ffprobe() {
     let pidfile = dir.join("pid");
     std::fs::write(
         dir.join("ffprobe"),
-        format!("#!/bin/sh\necho $$ > '{}'\nexec sleep 30\n", pidfile.display()),
+        format!(
+            "#!/bin/sh\necho $$ > '{}'\nexec sleep 30\n",
+            pidfile.display()
+        ),
     )
     .unwrap();
     std::fs::set_permissions(dir.join("ffprobe"), std::fs::Permissions::from_mode(0o755)).unwrap();
@@ -47,7 +50,10 @@ async fn dropping_the_future_kills_ffprobe() {
         if !alive {
             break;
         }
-        assert!(Instant::now() < deadline, "ffprobe child {pid} still running after drop");
+        assert!(
+            Instant::now() < deadline,
+            "ffprobe child {pid} still running after drop"
+        );
         std::thread::sleep(Duration::from_millis(20));
     }
     std::fs::remove_dir_all(&dir).unwrap();

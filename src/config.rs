@@ -7,6 +7,7 @@ use crate::{error::FfProbeError, ffprobe::FfProbe, ffprobe_config, IntoFfprobeAr
 pub struct Config {
     pub(crate) count_frames: bool,
     pub(crate) ffprobe_bin: std::path::PathBuf,
+    pub(crate) http_proxy: Option<String>,
 }
 
 impl Config {
@@ -15,6 +16,7 @@ impl Config {
         Config {
             count_frames: false,
             ffprobe_bin: "ffprobe".into(),
+            http_proxy: None,
         }
     }
 
@@ -30,6 +32,13 @@ impl Config {
     /// for executing `ffprobe`.
     pub fn ffprobe_bin(mut self, ffprobe_bin: impl AsRef<std::path::Path>) -> Self {
         self.ffprobe_bin = ffprobe_bin.as_ref().to_path_buf();
+        self
+    }
+
+    /// Route the input's HTTP(S) requests through this proxy, as ffmpeg's
+    /// `-http_proxy` option (for example `"http://127.0.0.1:3128"`).
+    pub fn http_proxy(mut self, proxy: impl Into<String>) -> Self {
+        self.http_proxy = Some(proxy.into());
         self
     }
 

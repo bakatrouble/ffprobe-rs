@@ -21,6 +21,9 @@ async fn async_config_runs_configured_ffprobe_bin() {
     let result = easy_ffprobe::ffprobe_async_config(config, "/nonexistent.mp4").await;
 
     assert!(marker.exists(), "configured ffprobe_bin was not executed");
-    assert!(matches!(result, Err(easy_ffprobe::error::FfProbeError::Status(_))));
+    assert!(matches!(
+        result,
+        Err(easy_ffprobe::error::FfProbeError::Status(_))
+    ));
     std::fs::remove_dir_all(&dir).unwrap();
 }
