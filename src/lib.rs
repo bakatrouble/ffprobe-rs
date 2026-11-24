@@ -169,6 +169,9 @@ pub fn ffprobe_config<'a, T: IntoFfprobeArg<'a>>(
     if let Some(proxy) = &config.http_proxy {
         cmd.args(["-http_proxy", proxy]);
     }
+    if let Some(timeout) = config.timeout {
+        cmd.args(["-timeout", &timeout.as_micros().to_string()]);
+    }
     cmd.arg(path.as_ref());
 
     // Prevent CMD popup on Windows.
@@ -210,6 +213,9 @@ pub async fn ffprobe_async_config<'a, T: IntoFfprobeArg<'a>>(
 
     if let Some(proxy) = &config.http_proxy {
         cmd.args(["-http_proxy", proxy]);
+    }
+    if let Some(timeout) = config.timeout {
+        cmd.args(["-timeout", &timeout.as_micros().to_string()]);
     }
     cmd.arg(path.as_ref());
 

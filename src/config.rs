@@ -8,6 +8,7 @@ pub struct Config {
     pub(crate) count_frames: bool,
     pub(crate) ffprobe_bin: std::path::PathBuf,
     pub(crate) http_proxy: Option<String>,
+    pub(crate) timeout: Option<std::time::Duration>,
 }
 
 impl Config {
@@ -17,6 +18,7 @@ impl Config {
             count_frames: false,
             ffprobe_bin: "ffprobe".into(),
             http_proxy: None,
+            timeout: None,
         }
     }
 
@@ -39,6 +41,13 @@ impl Config {
     /// `-http_proxy` option (for example `"http://127.0.0.1:3128"`).
     pub fn http_proxy(mut self, proxy: impl Into<String>) -> Self {
         self.http_proxy = Some(proxy.into());
+        self
+    }
+
+    /// Limit network I/O for the input, as ffmpeg's `-timeout` option.
+    /// The value is passed in microseconds, so sub-microsecond precision is dropped.
+    pub fn timeout(mut self, timeout: std::time::Duration) -> Self {
+        self.timeout = Some(timeout);
         self
     }
 
