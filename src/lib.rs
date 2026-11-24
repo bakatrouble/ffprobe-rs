@@ -207,6 +207,7 @@ pub async fn ffprobe_async_config<'a, T: IntoFfprobeArg<'a>>(
 
     cmd.arg(path.as_ref());
 
+    cmd.kill_on_drop(true);
     let out = cmd.output().await.map_err(FfProbeError::Io)?;
 
     if !out.status.success() {
